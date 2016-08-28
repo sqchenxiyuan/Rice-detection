@@ -20,11 +20,14 @@ struct Rice{
 	float minRectlengthwidthratio;//最小外接圆长宽比
 	vector<Point> minRectpoints;
 	vector<Point> points;//边缘
-	RotatedRect minRect;//最小外接圆
+	RotatedRect minRect;//最小外接矩形
 };
 
 struct allRice{
 	int areanum = 0;
+	int edgenum = 0;
+	int linknum = 0;
+	int incompletenum = 0;
 	int ricenum=0;//预估米粒数
 	float circumference = 0;//平均周长
 	float areasize = 0;//平均面积
@@ -39,15 +42,15 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	
 	Mat frame;
-
+	Mat edges;
 	bool stop = false;
-	frame = imread("2.jpg");
-	Mat edges(frame.rows+2,frame.cols+2,frame.type(),Scalar(0));
-	frame = MyCV::Copy(edges, frame, Point(1, 1), Rect(0, 0, frame.cols, frame.rows));
+	frame = imread("1.jpg");
+	/*Mat edges(frame.rows+2,frame.cols+2,frame.type(),Scalar(0));
+	frame = MyCV::Copy(edges, frame, Point(1, 1), Rect(0, 0, frame.cols, frame.rows));*/
 	//imshow("原图", frame);
 	cvtColor(frame, edges, CV_BGR2GRAY);//获取灰度图
 
-	GaussianBlur(edges, edges, Size(15, 15), 1.5, 1.5);//高斯模糊
+	GaussianBlur(edges, edges, Size(3, 3), 1.5, 1.5);//高斯模糊
 	//获取背景
 	Mat back;
 	Mat mark = cv::getStructuringElement(2,Size(51,51));
@@ -58,16 +61,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	//imshow("背景", back);
 	
 	edges = MyCV::Mult(edges, back);//去背景
-
 	/////////////////////////////////////////////////////////二值化
-
 	edges = MyCV::Iterative_threshold_segmentation(edges, 0.1);
 
 
-	/*Mat mark1 = cv::getStructuringElement(2, Size(7, 7));
-	Mat mark2 = cv::getStructuringElement(2, Size(1, 1));
+	Mat mark1 = cv::getStructuringElement(2, Size(7, 7));
+	Mat mark2 = cv::getStructuringElement(2, Size(7, 7));
 	cv::erode(edges, edges, mark1);
-	cv::dilate(edges, edges, mark2);*/
+	cv::dilate(edges, edges, mark2);
 	imshow("二值化图", edges);
 
 	/////////////////////////////////////////////////////////边缘检测
@@ -86,7 +87,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//去除边缘的米   默认为一个米
 
 
-	cv::findContours(edges, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_NONE);
+	cv::findContours(edges, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 	for (int i = 0; i < storage.size(); i++)
 	{
 		Rice newRice;
@@ -115,6 +116,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		//	cout << minRect.size.height << "====" << minRect.size.width << endl;
 		//}
 		if (lengthwidthratio < 1)lengthwidthratio = 1 / lengthwidthratio;
+		if (minRect.size.height == 0 || minRect.size.width == 0){
+			newRice.abandoned = true;
+		}
 		//contour_area_sum += contour_area_tmp; //求所有轮廓的面积和
 
 		//
@@ -149,7 +153,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	cout << "总长宽比" << allrice.lengthwidthratio << endl;
 	cout << "平均面积" << allrice.areasize << endl;
 
-	for (int i = 0;; i++){
+	for (int i = 0;;){
 
 		bool change = false;
 		Mat out = frame.clone();
@@ -165,69 +169,86 @@ int _tmain(int argc, _TCHAR* argv[])
 			
 			
 				//初始值
-				float minsize = allrice.areasize*0.7;
+				float minsize = allrice.areasize*0.8;
 				float maxsize = allrice.areasize*1.5;
 
 				float minlengthwidthratio = allrice.lengthwidthratio*0.8;
 				float maxlengthwidthratio = allrice.lengthwidthratio*2;
 
 				float minroundness = allrice.roundness*0.9;
-				float maxroundness = allrice.roundness*1.1;
+				float maxroundness = allrice.roundness*1.2;
 
 
 
-				//去除边缘的米   默认为一个米
-				vector<Point> points = rice->points;
-				for (int x = 0; x < points.size(); x++)
-				{
-					Point point = points.at(x);
-					if (point.x<2 || point.x>out.cols - 3 || point.y<2 || point.y>out.rows - 3){
+
+				if (i == 0){
+					//去除边缘的米   默认为一个米
+					vector<Point> points = rice->points;
+					for (int x = 0; x < points.size(); x++)
+					{
+						Point point = points.at(x);
+						
+						if (point.x<2 || point.x>out.cols - 3 || point.y<2 || point.y>out.rows - 3){
+							cv::drawContours(out, storage, j, Scalar(0, 255, 0), 1, 8);
+							if (rice->areasize < minsize){
+								cv::drawContours(out, storage, j, Scalar(255, 0, 0), 1, 8);
+								rice->abandoned = true;
+								change = true;
+							}
+							rice->edge = true;
+							break;
+						}
+					}
+				}
+				else if(i==1){
+					//检查残米
+					if (rices.at(j).areasize < minsize&&!rice->abandoned){
 						cv::drawContours(out, storage, j, Scalar(255, 0, 0), 1, 8);
-						//cout << point.x << "====" << point.y << "====" << j << endl;
-						if (rice->areasize < minsize){
-							cv::drawContours(out, storage, j, Scalar(255, 0, 255), 1, 8);
+						/*cout << rices.at(j).minRectpoints.at(0).x << "==0==" << rices.at(j).minRectpoints.at(0).y << endl;
+						cout << rices.at(j).minRectpoints.at(1).x << "==1==" << rices.at(j).minRectpoints.at(1).y << endl;
+						cout << rices.at(j).minRectpoints.at(2).x << "==2==" << rices.at(j).minRectpoints.at(2).y << endl;
+						cout << rices.at(j).minRectpoints.at(3).x << "==3==" << rices.at(j).minRectpoints.at(3).y << endl;*/
+						//cout << rices.at(j).minRectlengthwidthratio << "====" << allrice.lengthwidthratio << endl;
+						if ((rices.at(j).minRectlengthwidthratio<minlengthwidthratio || 
+							rices.at(j).minRectlengthwidthratio>maxlengthwidthratio)){
+							cv::drawContours(out, storage, j, Scalar(0, 0, 255), 1, 8);
 							rice->abandoned = true;
+							rice->incomplete = true;
 							change = true;
 						}
-						rice->edge = true;
-						break;
 					}
+					/*if ((rices.at(j).minRectlengthwidthratio<minlengthwidthratio || rices.at(j).minRectlengthwidthratio>maxlengthwidthratio) && !rice->abandoned){
+						cv::drawContours(out, storage, j, Scalar(0, 255, 0), 1, 8);
+						rices.at(j).abandoned = true;
+						change = true;
+					}*/
 				}
-
-
-
-				//首先检测多米共存
-				if (rice->areasize > maxsize&&!rice->abandoned){
-					cv::drawContours(out, storage, j, Scalar(255, 255, 0), 1, 8);
-					cout << rice->areasize << "====" << allrice.areasize << "====" << rice->areasize / allrice.areasize << endl;
-					int sum = rice->areasize / allrice.areasize;
-					if (sum + 1 - rice->areasize / allrice.areasize > 0.5){
-						sum++;
-					}
-					rice->abandoned = true;
-					rice->ricenum = sum+1;
-					rice->link = true;
-					change = true;
-				}
-				//检查残米
-				if (rices.at(j).areasize < minsize&&!rice->abandoned){
-					cv::drawContours(out, storage, j, Scalar(255, 0, 0), 1, 8);
-					/*cout << rices.at(j).minRectpoints.at(0).x << "==0==" << rices.at(j).minRectpoints.at(0).y << endl;
-					cout << rices.at(j).minRectpoints.at(1).x << "==1==" << rices.at(j).minRectpoints.at(1).y << endl;
-					cout << rices.at(j).minRectpoints.at(2).x << "==2==" << rices.at(j).minRectpoints.at(2).y << endl;
-					cout << rices.at(j).minRectpoints.at(3).x << "==3==" << rices.at(j).minRectpoints.at(3).y << endl;*/
-					//cout << rices.at(j).minRectlengthwidthratio << "====" << allrice.lengthwidthratio << endl;
-					if ((rices.at(j).minRectlengthwidthratio<minlengthwidthratio || rices.at(j).minRectlengthwidthratio>maxlengthwidthratio)){
-						cv::drawContours(out, storage, j, Scalar(0, 0, 255), 1, 8);
+				else if (i == 2){
+					if (rice->areasize < maxsize && (rices.at(j).minRectlengthwidthratio<minlengthwidthratio
+						|| rices.at(j).minRectlengthwidthratio>maxlengthwidthratio)
+						&& !rice->edge){
+						cv::drawContours(out, storage, j, Scalar(255, 0, 255), 1, 8);
 						rice->abandoned = true;
+						rice->ricenum = 2;
+						rice->link = true;
 						rice->incomplete = true;
 						change = true;
 					}
 				}
-				if ((rices.at(j).minRectlengthwidthratio<minlengthwidthratio || rices.at(j).minRectlengthwidthratio>maxlengthwidthratio) && !rice->abandoned){
-					cv::drawContours(out, storage, j, Scalar(0, 255, 0), 1, 8);
-					rices.at(j).abandoned = true;
-					change = true;
+				else{
+					//检测多米共存
+					if (rice->areasize > maxsize&&!rice->abandoned){
+						cv::drawContours(out, storage, j, Scalar(255, 255, 0), 1, 8);
+						cout << rice->areasize << "====" << allrice.areasize << "====" << rice->areasize / allrice.areasize << endl;
+						int sum = rice->areasize / allrice.areasize;
+						if (sum + 1 - rice->areasize / allrice.areasize < 0.5){
+							sum++;
+						}
+						rice->abandoned = true;
+						rice->ricenum = sum;
+						rice->link = true;
+						change = true;
+					}
 				}
 
 
@@ -243,7 +264,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		imshow("OUT", out);
 
-		waitKey();
 		if (change){
 			allrice = getallRicedata(rices);
 			cout << "////////////////第" << i << "次////////////////" << endl;
@@ -255,11 +275,64 @@ int _tmain(int argc, _TCHAR* argv[])
 			cout << "平均面积" << allrice.areasize << endl;
 		}
 		else{
-			cout << "////////////////无变化，检查结束////////////////" << endl;
-			break;
+			if (i < 3){
+				cout << "////////////////第" << i << "次完成////////////////" << endl;
+				i++;
+			}
+			else
+			{
+				cout << "////////////////无变化，检查结束////////////////" << endl;
+				break;
+			}
 		}
+		waitKey();
 
 	}
+
+	allrice = getallRicedata(rices);
+	cout << "////////////////结果////////////////" << endl;
+	
+	out = frame.clone();
+
+	for (int i = 0; i < rices.size(); i++)
+	{
+		Rice *rice = &rices.at(i);
+		int r =0, g =0, b = 0;
+		string str = "";
+		if (rice->edge) {
+			str += " 这块区域沾边 ||";
+			b = 1;
+		}
+		if (rice->link){
+			str += " 这块区域可能有" + int(rice->ricenum - 1);
+			str += "到" + int(rice->ricenum);
+			str += "个米粘连 ||";
+			g = 1;
+		}
+		if (rice->incomplete) {
+			str += "这块区域可能包含残缺的米";
+			r = 1;
+		}
+		cv::drawContours(out, storage, i, Scalar(b*255, g*255, r*255), 1, 8);
+		if (str != ""){
+			cout << "区域" << i << "=》 估计米粒数:" << rice->ricenum << " 圆形度:" << rice->roundness
+				<< " 矩形度:" << rice->rectangularity << " 长宽比:" << rice->minRectlengthwidthratio
+				<< " 面积:" << rice->areasize << endl;
+			cout << "备注:" << str << endl;
+		}
+	}
+
+	cout << "////////////////总和////////////////" << endl;
+	cout << "区域总数" << allrice.areanum << endl;
+	cout << "预估米粒总数" << allrice.ricenum << endl;
+	cout << "边缘米数量" << allrice.edgenum << endl;
+	cout << "粘连米数量" << allrice.linknum << endl;
+	cout << "残缺米数量" << allrice.incompletenum << endl;
+	cout << "总圆形度" << allrice.roundness << endl;
+	cout << "总矩形度" << allrice.rectangularity << endl;
+	cout << "总长宽比" << allrice.lengthwidthratio << endl;
+	cout << "平均面积" << allrice.areasize << endl;
+	imshow("OUT", out);
 
 	//imshow("OUT", frame);
 
@@ -295,6 +368,9 @@ allRice getallRicedata(vector<Rice> rices){
 	int activenum=0;
 	for (int i = 0; i < l; i++){
 		allrice.ricenum += rices.at(i).ricenum;
+		if (rices.at(i).edge) allrice.edgenum += rices.at(i).ricenum;
+		if (rices.at(i).link) allrice.linknum += rices.at(i).ricenum;
+		if (rices.at(i).incomplete) allrice.incompletenum += rices.at(i).ricenum;
 		if (rices.at(i).abandoned) continue;
 		activenum += rices.at(i).ricenum;
 		allrice.areasize += rices.at(i).areasize;
