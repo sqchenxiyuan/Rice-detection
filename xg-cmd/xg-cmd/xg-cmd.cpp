@@ -6,6 +6,8 @@
 Mat toshowMat(const Mat a);
 Mat mutlMat(const Mat a, const Mat b);
 Mat rotateImage1(Mat img, int degree);
+Mat getNBack();
+Mat hunhe(vector<Mat> imgs);
 vector<Mat> getKuai(Mat img);
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -40,8 +42,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int i = 0; i < kuais.size(); i++)
 	{
 		//imshow("提取图" + i, toshowMat(kuais.at(i)));
-		imshow("提取图" + i, toshowMat(getKuai(kuais.at(i)).at(0)));
+		imshow("提取图 牛奶盒", toshowMat(getKuai(kuais.at(i)).at(0)));
 	}
+
+	getNBack();
 
 	waitKey();
 	return 0;
@@ -112,6 +116,58 @@ Mat rotateImage1(Mat img, int degree)
 	return img_rotate;
 }
 
+Mat getNBack(){
+	Mat i1 = imread("src/back/1.jpg");
+	Mat i2 = imread("src/back/2.jpg");
+	Mat i3 = imread("src/back/3.jpg");
+	Mat i4 = imread("src/back/4.jpg");
+	Mat i5 = imread("src/back/5.jpg");
+
+	vector<Mat> imgs;
+	imgs.push_back(i1);
+	imgs.push_back(i2);
+	imgs.push_back(i3);
+	imgs.push_back(i4);
+	imgs.push_back(i5);
+
+	return  hunhe(imgs);
+}
+
+Mat hunhe(vector<Mat> imgs){
+	Size dsize = Size(600, 1000);
+	Mat out = Mat(dsize, CV_8UC3);
+
+	for (int x = 0; x < imgs.size(); x++){
+		Mat a = imgs.at(x);
+		Mat b = Mat(dsize, a.type(),Scalar(0,0,0));
+		resize(a, b, dsize);
+
+		imshow("test", b);
+
+		for (int i = 0; i < b.rows&&i < out.rows; i++){
+			for (int j = 0; j < b.cols&&i < out.cols; j++){
+				int x0 = b.at<Vec3b>(i, j)[0] / imgs.size();
+				int x1 = b.at<Vec3b>(i, j)[1] / imgs.size();
+				int x2 = b.at<Vec3b>(i, j)[2] / imgs.size();
+
+				if (out.at<Vec3b>(i, j)[0] + x0 >255)
+					out.at<Vec3b>(i, j)[0] = 255;
+				else out.at<Vec3b>(i, j)[0] += x0;
+
+				if (out.at<Vec3b>(i, j)[1] + x0 >255)
+					out.at<Vec3b>(i, j)[1] = 255;
+				else out.at<Vec3b>(i, j)[1] += x0;
+
+				if (out.at<Vec3b>(i, j)[2] + x0 >255)
+					out.at<Vec3b>(i, j)[2] = 255;
+				else out.at<Vec3b>(i, j)[2] += x0;
+
+			}
+		}
+	}
+	imshow("test",toshowMat(out));
+	return out;
+}
 
 vector<Mat> getKuai(Mat img){
 	vector<Mat> list;
@@ -121,7 +177,7 @@ vector<Mat> getKuai(Mat img){
 
 	cvtColor(x, x, CV_BGR2GRAY);//获取灰度图
 	threshold(x,x, 1, 255, CV_THRESH_BINARY);//二值化
-	GaussianBlur(x, x, Size(15, 15), 1.5, 1.5);
+	GaussianBlur(x, x, Size(5, 5), 1, 1);
 
 	//Canny(mult, mult,0, 100, 3);
 
@@ -131,7 +187,7 @@ vector<Mat> getKuai(Mat img){
 	vector<Vec4i> hierarchy;
 	//去除边缘的米   默认为一个米
 
-
+	/*imshow("test1",x);*/
 	cv::findContours(x, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
 	for (int i = 0; i < storage.size(); i++)
 	{
@@ -139,18 +195,22 @@ vector<Mat> getKuai(Mat img){
 		RotatedRect minRect = minAreaRect(storage.at(i));
 		Rect bo = boundingRect(storage.at(i));
 		cout << minRect.angle;
+		imshow("test", y);
 
-		Mat h = y(bo);
+		Mat h = y(bo).clone();
 		h = rotateImage1(h, -minRect.angle);
+		
 		list.push_back(h);
+
+		rectangle(y, bo, Scalar(0, 0, 255));
 	}
 
 	for (int i = 0; i < storage.size(); i++)
 	{
-		drawContours(y, storage, i, Scalar(255, 0, 0), 10, 8);
+		drawContours(y, storage, i, Scalar(255, 0, 0), 2, 8);
 	}
 
-	imshow("提取图", toshowMat(y));
+	//imshow("提取图123", toshowMat(y));
 
 	return list;
 }
