@@ -9,6 +9,7 @@ Mat rotateImage1(Mat img, int degree);
 Mat getNBack();
 Mat hunhe(vector<Mat> imgs);
 vector<Mat> getKuai(Mat img);
+Mat mutlMat_gray(const Mat a, const Mat b);
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -37,15 +38,68 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	Mat mult = imread("src/P4.png");
 	imshow("提取图", toshowMat(mult));
-	
+	Mat x;
+
 	vector<Mat> kuais=getKuai(mult);
 	for (int i = 0; i < kuais.size(); i++)
 	{
 		//imshow("提取图" + i, toshowMat(kuais.at(i)));
-		imshow("提取图 牛奶盒", toshowMat(getKuai(kuais.at(i)).at(0)));
+		x = getKuai(kuais.at(i)).at(i);
+		imshow("提取图 牛奶盒", toshowMat(x));
 	}
 
-	getNBack();
+	Size dsize = Size(600, 1000);
+	Mat b = Mat(dsize, x.type());
+	resize(x, b, dsize);
+
+	//Mat heback=getNBack();//牛奶盒背景
+	////imshow("牛奶盒背景", toshowMat(heback));
+	//cvtColor(heback, heback, CV_BGR2GRAY);//获取灰度图
+	////imshow("牛奶盒背景-灰", toshowMat(heback));
+	//Mat back;
+	//Mat mark = cv::getStructuringElement(2, Size(51, 51));
+	//morphologyEx(heback, heback, MORPH_OPEN, mark);//开运算 先腐蚀后膨胀
+	//imshow("牛奶盒背景-开", toshowMat(heback));
+
+
+
+	//b = mutlMat(b, heback);
+
+	//mark = cv::getStructuringElement(2, Size(11,11));
+	//morphologyEx(b,b, MORPH_OPEN, mark);
+	//imshow("提取图-开", toshowMat(b));
+
+
+	cvtColor(b,b, CV_BGR2GRAY);//获取灰度图
+	imshow("提取图-灰度", toshowMat(b));
+	GaussianBlur(b, b, Size(31, 31), 1.5, 1.5);
+	imshow("提取图-gauss", toshowMat(b));
+
+	//b = mutlMat_gray(b, heback);
+	//imshow("提取图-jian", toshowMat(b));
+
+	Canny(b, b, 0, 30, 3,3);
+	imshow("提取图-canny", toshowMat(b));
+
+
+	vector<vector<Point>> storage;
+	vector<Vec4i> hierarchy;
+	findContours(b, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+	for (int i = 0; i < storage.size(); i++)
+	{
+		RotatedRect minRect = minAreaRect(storage.at(i));
+		//drawContours(b, storage, i, Scalar(255, 0, 0), 1, 8);
+		//imshow("提取图-边缘", toshowMat(b));
+		if (minRect.angle<-20 && minRect.angle>-30 && minRect.size.width<10){
+			rectangle(b, minRect.boundingRect(), Scalar(255, 0, 0));
+			drawContours(b, storage, i, Scalar(255, 0, 0), 2, 8);
+			cout << minRect.size<< endl;
+		}
+		
+		//waitKey();
+	}
+
+	imshow("提取图-边缘", toshowMat(b));
 
 	waitKey();
 	return 0;
@@ -69,7 +123,7 @@ Mat mutlMat(const Mat a, const Mat b){
 	Size dsize = Size(a.cols, a.rows);
 	Mat out = Mat(dsize, CV_8UC3);
 	for (int i = 0; i < a.rows&&i < b.rows; i++){
-		for (int j = 0; j < a.cols&&i < b.cols; j++){
+		for (int j = 0; j < a.cols&&j < b.cols; j++){
 			Vec3b vec;
 			int z = 0;
 			for (int q = 0; q < 3; q++){
@@ -77,13 +131,27 @@ Mat mutlMat(const Mat a, const Mat b){
 				int y = b.at<Vec3b>(i, j)[q];
 				z += abs(x - y);	
 			}
-			if (z < 30) out.at<Vec3b>(i, j) = Vec3b(0,0,0);
+			if (z < 50) out.at<Vec3b>(i, j) = Vec3b(0,0,0);
 			else out.at<Vec3b>(i, j) = a.at<Vec3b>(i, j);
 		}
 	}
-
 	return out;
+}
 
+Mat mutlMat_gray(const Mat a, const Mat b){
+	Size dsize = Size(a.cols, a.rows);
+	Mat out = Mat(dsize,CV_8U);
+	for (int i = 0; i < a.rows&&i < b.rows; i++){
+		for (int j = 0; j < a.cols&&j < b.cols; j++){
+			int x = a.at<uchar>(i, j);
+			int y = b.at<uchar>(i, j);
+			int z = abs(x - y);
+			//if (z < 30) out.at<uchar>(i, j) = 0;
+			//else out.at<uchar>(i, j) = z;
+			out.at<uchar>(i, j) = z;
+		}
+	}
+	return out;
 }
 
 
@@ -139,32 +207,35 @@ Mat hunhe(vector<Mat> imgs){
 
 	for (int x = 0; x < imgs.size(); x++){
 		Mat a = imgs.at(x);
-		Mat b = Mat(dsize, a.type(),Scalar(0,0,0));
+		Mat b = Mat(dsize, a.type());
 		resize(a, b, dsize);
+		imgs.at(x) = b;
+		
+	}
 
-		imshow("test", b);
+	for (int i = 0;i < out.rows; i++){
+		for (int j = 0; j < out.cols; j++){
+			int x0=0, x1=0, x2=0;
 
-		for (int i = 0; i < b.rows&&i < out.rows; i++){
-			for (int j = 0; j < b.cols&&i < out.cols; j++){
-				int x0 = b.at<Vec3b>(i, j)[0] / imgs.size();
-				int x1 = b.at<Vec3b>(i, j)[1] / imgs.size();
-				int x2 = b.at<Vec3b>(i, j)[2] / imgs.size();
-
-				if (out.at<Vec3b>(i, j)[0] + x0 >255)
-					out.at<Vec3b>(i, j)[0] = 255;
-				else out.at<Vec3b>(i, j)[0] += x0;
-
-				if (out.at<Vec3b>(i, j)[1] + x0 >255)
-					out.at<Vec3b>(i, j)[1] = 255;
-				else out.at<Vec3b>(i, j)[1] += x0;
-
-				if (out.at<Vec3b>(i, j)[2] + x0 >255)
-					out.at<Vec3b>(i, j)[2] = 255;
-				else out.at<Vec3b>(i, j)[2] += x0;
-
+			for (int x = 0; x < imgs.size(); x++){
+				Mat a = imgs.at(x);
+				x0 += a.at<Vec3b>(i, j)[0];
+				x1 += a.at<Vec3b>(i, j)[1];
+				x2 += a.at<Vec3b>(i, j)[2];
 			}
+			x0 /= imgs.size();
+			x1 /= imgs.size();
+			x2 /= imgs.size();
+
+			Vec3b vec(x0, x1, x2);
+			out.at<Vec3b>(i, j) = vec;
+			//cout << x0 << "," << x1 << "," << x2 << endl;
+			//cout << out.at<Vec3b>(i, j)[0] << "," << out.at<Vec3b>(i, j)[1] << "," << out.at<Vec3b>(i, j)[2] << endl;
+
 		}
 	}
+	GaussianBlur(out, out, Size(15, 15), 1.5, 1.5);
+
 	imshow("test",toshowMat(out));
 	return out;
 }
