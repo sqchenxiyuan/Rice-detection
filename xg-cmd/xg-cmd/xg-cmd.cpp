@@ -11,6 +11,11 @@ Mat hunhe(vector<Mat> imgs);
 vector<Mat> getKuai(Mat img);
 Mat mutlMat_gray(const Mat a, const Mat b);
 
+
+//获取牛奶盒封面特征值
+float getFeatures_LineLength(const Mat input);
+
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	//////////////////////////////////////////////获取牛奶盒
@@ -37,7 +42,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	Mat mult = imread("src/P4.png");
-	imshow("提取图", toshowMat(mult));
+	//imshow("提取图", toshowMat(mult));
 	Mat x;
 
 	vector<Mat> kuais=getKuai(mult);
@@ -45,12 +50,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	{
 		//imshow("提取图" + i, toshowMat(kuais.at(i)));
 		x = getKuai(kuais.at(i)).at(i);
-		imshow("提取图 牛奶盒", toshowMat(x));
+		//imshow("提取图 牛奶盒", toshowMat(x));
 	}
 
-	Size dsize = Size(600, 1000);
+	/*Size dsize = Size(600, 1000);
 	Mat b = Mat(dsize, x.type());
-	resize(x, b, dsize);
+	resize(x, b, dsize);*/
 
 	//Mat heback=getNBack();//牛奶盒背景
 	////imshow("牛奶盒背景", toshowMat(heback));
@@ -69,37 +74,63 @@ int _tmain(int argc, _TCHAR* argv[])
 	//morphologyEx(b,b, MORPH_OPEN, mark);
 	//imshow("提取图-开", toshowMat(b));
 
-
-	cvtColor(b,b, CV_BGR2GRAY);//获取灰度图
-	imshow("提取图-灰度", toshowMat(b));
-	GaussianBlur(b, b, Size(31, 31), 1.5, 1.5);
-	imshow("提取图-gauss", toshowMat(b));
-
-	//b = mutlMat_gray(b, heback);
-	//imshow("提取图-jian", toshowMat(b));
-
-	Canny(b, b, 0, 30, 3,3);
-	imshow("提取图-canny", toshowMat(b));
+	Mat img1 = x;
 
 
-	vector<vector<Point>> storage;
-	vector<Vec4i> hierarchy;
-	findContours(b, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-	for (int i = 0; i < storage.size(); i++)
-	{
-		RotatedRect minRect = minAreaRect(storage.at(i));
-		//drawContours(b, storage, i, Scalar(255, 0, 0), 1, 8);
-		//imshow("提取图-边缘", toshowMat(b));
-		if (minRect.angle<-20 && minRect.angle>-30 && minRect.size.width<10){
-			rectangle(b, minRect.boundingRect(), Scalar(255, 0, 0));
-			drawContours(b, storage, i, Scalar(255, 0, 0), 2, 8);
-			cout << minRect.size<< endl;
-		}
-		
-		//waitKey();
+	float alllength;
+	float max,min;
+	cout << "=====提取的=====" << endl;
+	cout << getFeatures_LineLength(img1) << endl;
+
+
+
+	cout << "=====无吸管集合=====" << endl;
+	vector<Mat> falseset;
+	falseset.push_back(imread("src/false/1.jpg"));
+	falseset.push_back(imread("src/false/2.jpg"));
+	falseset.push_back(imread("src/false/3.jpg"));
+	falseset.push_back(imread("src/false/4.jpg"));
+	falseset.push_back(imread("src/false/5.jpg"));
+
+	alllength = 0;
+	min = FLT_MAX;
+	max = 0;
+	for (int i = 0; i < falseset.size(); i++){
+		float l = getFeatures_LineLength(falseset.at(i));
+		cout << "图片 " << i + 1 << " : " << l << endl;
+		alllength += l;
+		if (l > max)max = l;
+		else if (l < min)min = l;
 	}
+	cout << "错误平均 : " << alllength / falseset.size() << endl;
+	cout << "最大值 : " << max << endl;
+	cout << "最小值 : " << min << endl;
 
-	imshow("提取图-边缘", toshowMat(b));
+
+	cout << "=====有吸管集合=====" << endl;
+
+
+	vector<Mat> trueset;
+	trueset.push_back(imread("src/true/img1.jpg"));
+	trueset.push_back(imread("src/true/img2.jpg"));
+	trueset.push_back(imread("src/true/img3.jpg"));
+	trueset.push_back(imread("src/true/img4.jpg"));
+	trueset.push_back(imread("src/true/img5.jpg"));
+
+	alllength = 0;
+	min = FLT_MAX;
+	max = 0;
+	for (int i = 0; i < trueset.size(); i++){
+		float l = getFeatures_LineLength(trueset.at(i));
+		cout << "图片 " << i + 1 << " : " << l << endl;
+		alllength += l;
+		if (l > max)max = l;
+		else if (l < min)min = l;
+	}
+	cout << "正确平均 : " << alllength / trueset.size() << endl;
+	cout << "最大值 : " << max << endl;
+	cout << "最小值 : " << min << endl;
+
 
 	waitKey();
 	return 0;
@@ -236,7 +267,7 @@ Mat hunhe(vector<Mat> imgs){
 	}
 	GaussianBlur(out, out, Size(15, 15), 1.5, 1.5);
 
-	imshow("test",toshowMat(out));
+	//imshow("test",toshowMat(out));
 	return out;
 }
 
@@ -265,8 +296,8 @@ vector<Mat> getKuai(Mat img){
 		
 		RotatedRect minRect = minAreaRect(storage.at(i));
 		Rect bo = boundingRect(storage.at(i));
-		cout << minRect.angle;
-		imshow("test", y);
+		//cout << minRect.angle;
+		//imshow("test", y);
 
 		Mat h = y(bo).clone();
 		h = rotateImage1(h, -minRect.angle);
@@ -284,4 +315,48 @@ vector<Mat> getKuai(Mat img){
 	//imshow("提取图123", toshowMat(y));
 
 	return list;
+}
+
+
+
+
+float getFeatures_LineLength(const Mat input){
+	Size dsize = Size(600, 1000);
+	Mat a = Mat(dsize, CV_8UC3);
+	resize(input, a, dsize);
+
+	float lineLength = 0;
+
+	cvtColor(a, a, CV_BGR2GRAY);//获取灰度图
+	//imshow("提取图-灰度", toshowMat(a));
+	GaussianBlur(a, a, Size(31, 31), 1.5, 1.5);
+	//imshow("提取图-gauss", toshowMat(b));
+
+	Canny(a, a, 0, 30, 3, 3);
+	//imshow("提取图-canny", toshowMat(b));
+
+
+	vector<vector<Point>> storage;
+	vector<Vec4i> hierarchy;
+	findContours(a, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+	
+	for (int i = 0; i < storage.size(); i++)
+	{
+		RotatedRect minRect = minAreaRect(storage.at(i));
+		//drawContours(b, storage, i, Scalar(255, 0, 0), 1, 8);
+		//imshow("提取图-边缘", toshowMat(b));
+		//if (minRect.angle<-15 && minRect.angle>-30 && minRect.size.width<10){
+		float p = minRect.size.height / minRect.size.width;
+
+		if (minRect.angle<-15 && minRect.angle>-30 && p>3){
+			rectangle(a, minRect.boundingRect(), Scalar(255, 0, 0));
+			drawContours(a, storage, i, Scalar(255, 0, 0), 2, 8);
+			vector<Point> points = storage.at(i);
+			lineLength += arcLength(points, true) / 4;
+		}
+	}
+	imshow("提取图-边缘", toshowMat(a));
+	waitKey(0);
+
+	return lineLength;
 }
