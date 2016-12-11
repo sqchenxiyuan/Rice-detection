@@ -7,6 +7,7 @@
 
 #include "targetver.h"
 
+#include <io.h>
 #include <stdio.h>
 #include <tchar.h>
 #include <iostream>
@@ -18,6 +19,7 @@
 using namespace std;
 using namespace cv;
 
-
+#include "ImgSetData.h"
+#include "MyCV.h"
 
 // TODO:  在此处引用程序需要的其他头文件

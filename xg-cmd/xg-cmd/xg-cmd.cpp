@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 
-Mat toshowMat(const Mat a);
 Mat mutlMat(const Mat a, const Mat b);
 Mat rotateImage1(Mat img, int degree);
 Mat getNBack();
@@ -12,12 +11,27 @@ vector<Mat> getKuai(Mat img);
 Mat mutlMat_gray(const Mat a, const Mat b);
 
 
-//获取牛奶盒封面特征值
-float getFeatures_LineLength(const Mat input);
+
 
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	cout << "=========无吸管集合=========" << endl;
+	CImgSetData false_set("src/false");
+
+	cout << "错误平均 : " << false_set.getLength("avg") << endl;
+	cout << "最大值 : " << false_set.getLength("max") << endl;
+	cout << "最小值 : " << false_set.getLength("min") << endl;
+
+	cout << "=========有吸管集合=========" << endl;
+	CImgSetData true_set("src/true");
+
+	cout << "错误平均 : " << true_set.getLength("avg") << endl;
+	cout << "最大值 : " << true_set.getLength("max") << endl;
+	cout << "最小值 : " << true_set.getLength("min") << endl;
+
+
+
 	//////////////////////////////////////////////获取牛奶盒
 	//Mat backgroud = imread("src/P1.png");
 	////Mat backgroud_show = toshowMat(backgroud);
@@ -80,74 +94,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	float alllength;
 	float max,min;
 	cout << "=====提取的=====" << endl;
-	cout << getFeatures_LineLength(img1) << endl;
+	cout << MyCV::getFeatures_LineLength(img1) << endl;
+	
 
 
 
-	cout << "=====无吸管集合=====" << endl;
-	vector<Mat> falseset;
-	falseset.push_back(imread("src/false/1.jpg"));
-	falseset.push_back(imread("src/false/2.jpg"));
-	falseset.push_back(imread("src/false/3.jpg"));
-	falseset.push_back(imread("src/false/4.jpg"));
-	falseset.push_back(imread("src/false/5.jpg"));
 
-	alllength = 0;
-	min = FLT_MAX;
-	max = 0;
-	for (int i = 0; i < falseset.size(); i++){
-		float l = getFeatures_LineLength(falseset.at(i));
-		cout << "图片 " << i + 1 << " : " << l << endl;
-		alllength += l;
-		if (l > max)max = l;
-		else if (l < min)min = l;
-	}
-	cout << "错误平均 : " << alllength / falseset.size() << endl;
-	cout << "最大值 : " << max << endl;
-	cout << "最小值 : " << min << endl;
-
-
-	cout << "=====有吸管集合=====" << endl;
-
-
-	vector<Mat> trueset;
-	trueset.push_back(imread("src/true/img1.jpg"));
-	trueset.push_back(imread("src/true/img2.jpg"));
-	trueset.push_back(imread("src/true/img3.jpg"));
-	trueset.push_back(imread("src/true/img4.jpg"));
-	trueset.push_back(imread("src/true/img5.jpg"));
-
-	alllength = 0;
-	min = FLT_MAX;
-	max = 0;
-	for (int i = 0; i < trueset.size(); i++){
-		float l = getFeatures_LineLength(trueset.at(i));
-		cout << "图片 " << i + 1 << " : " << l << endl;
-		alllength += l;
-		if (l > max)max = l;
-		else if (l < min)min = l;
-	}
-	cout << "正确平均 : " << alllength / trueset.size() << endl;
-	cout << "最大值 : " << max << endl;
-	cout << "最小值 : " << min << endl;
-
-
-	waitKey();
+	waitKey(0);
 	return 0;
 }
 
-
-Mat toshowMat(const Mat a){
-
-	double fScale = 500.0 / a.cols;//缩放系数  
-
-	//计算目标图像的大小  
-	Size dsize = Size(a.cols*fScale, a.rows*fScale);
-	Mat b = Mat(dsize,a.type());
-	resize(a, b, dsize);
-
-	return b;
-}
 
 
 Mat mutlMat(const Mat a, const Mat b){
@@ -315,48 +271,4 @@ vector<Mat> getKuai(Mat img){
 	//imshow("提取图123", toshowMat(y));
 
 	return list;
-}
-
-
-
-
-float getFeatures_LineLength(const Mat input){
-	Size dsize = Size(600, 1000);
-	Mat a = Mat(dsize, CV_8UC3);
-	resize(input, a, dsize);
-
-	float lineLength = 0;
-
-	cvtColor(a, a, CV_BGR2GRAY);//获取灰度图
-	//imshow("提取图-灰度", toshowMat(a));
-	GaussianBlur(a, a, Size(31, 31), 1.5, 1.5);
-	//imshow("提取图-gauss", toshowMat(b));
-
-	Canny(a, a, 0, 30, 3, 3);
-	//imshow("提取图-canny", toshowMat(b));
-
-
-	vector<vector<Point>> storage;
-	vector<Vec4i> hierarchy;
-	findContours(a, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-	
-	for (int i = 0; i < storage.size(); i++)
-	{
-		RotatedRect minRect = minAreaRect(storage.at(i));
-		//drawContours(b, storage, i, Scalar(255, 0, 0), 1, 8);
-		//imshow("提取图-边缘", toshowMat(b));
-		//if (minRect.angle<-15 && minRect.angle>-30 && minRect.size.width<10){
-		float p = minRect.size.height / minRect.size.width;
-
-		if (minRect.angle<-15 && minRect.angle>-30 && p>3){
-			rectangle(a, minRect.boundingRect(), Scalar(255, 0, 0));
-			drawContours(a, storage, i, Scalar(255, 0, 0), 2, 8);
-			vector<Point> points = storage.at(i);
-			lineLength += arcLength(points, true) / 4;
-		}
-	}
-	imshow("提取图-边缘", toshowMat(a));
-	waitKey(0);
-
-	return lineLength;
 }
