@@ -11,11 +11,26 @@ vector<Mat> getKuai(Mat img);
 Mat mutlMat_gray(const Mat a, const Mat b);
 
 
+DWORD WINAPI  showViedo(LPVOID lpParam){
+	VideoCapture* cap = (VideoCapture*)lpParam;
+	Mat now;
+	bool stop=false;
+	while (!stop)
+	{
+		*cap >> now;
+		imshow("V", now);
+		waitKey(30);
+	}
+	return NULL;
+}
 
 
 
 int _tmain(int argc, _TCHAR* argv[])
-{
+{	
+	VideoCapture cap(0);
+	HANDLE v = CreateThread(0, 0, showViedo, &cap, 0, NULL);
+
 	cout << "=========ÎÞÎü¹Ü¼¯ºÏ=========" << endl;
 	CImgSetData false_set("src/false");
 
@@ -55,50 +70,55 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 
-	Mat mult = imread("src/P4.png");
-	//imshow("ÌáÈ¡Í¼", toshowMat(mult));
-	Mat x;
+	//Mat mult = imread("src/P4.png");
+	////imshow("ÌáÈ¡Í¼", toshowMat(mult));
+	//Mat x;
 
-	vector<Mat> kuais=getKuai(mult);
-	for (int i = 0; i < kuais.size(); i++)
-	{
-		//imshow("ÌáÈ¡Í¼" + i, toshowMat(kuais.at(i)));
-		x = getKuai(kuais.at(i)).at(i);
-		//imshow("ÌáÈ¡Í¼ Å£ÄÌºÐ", toshowMat(x));
-	}
+	//vector<Mat> kuais=getKuai(mult);
+	//for (int i = 0; i < kuais.size(); i++)
+	//{
+	//	//imshow("ÌáÈ¡Í¼" + i, toshowMat(kuais.at(i)));
+	//	x = getKuai(kuais.at(i)).at(i);
+	//	//imshow("ÌáÈ¡Í¼ Å£ÄÌºÐ", toshowMat(x));
+	//}
 
-	/*Size dsize = Size(600, 1000);
-	Mat b = Mat(dsize, x.type());
-	resize(x, b, dsize);*/
+	///*Size dsize = Size(600, 1000);
+	//Mat b = Mat(dsize, x.type());
+	//resize(x, b, dsize);*/
 
-	//Mat heback=getNBack();//Å£ÄÌºÐ±³¾°
-	////imshow("Å£ÄÌºÐ±³¾°", toshowMat(heback));
-	//cvtColor(heback, heback, CV_BGR2GRAY);//»ñÈ¡»Ò¶ÈÍ¼
-	////imshow("Å£ÄÌºÐ±³¾°-»Ò", toshowMat(heback));
-	//Mat back;
-	//Mat mark = cv::getStructuringElement(2, Size(51, 51));
-	//morphologyEx(heback, heback, MORPH_OPEN, mark);//¿ªÔËËã ÏÈ¸¯Ê´ºóÅòÕÍ
-	//imshow("Å£ÄÌºÐ±³¾°-¿ª", toshowMat(heback));
-
-
-
-	//b = mutlMat(b, heback);
-
-	//mark = cv::getStructuringElement(2, Size(11,11));
-	//morphologyEx(b,b, MORPH_OPEN, mark);
-	//imshow("ÌáÈ¡Í¼-¿ª", toshowMat(b));
-
-	Mat img1 = x;
+	////Mat heback=getNBack();//Å£ÄÌºÐ±³¾°
+	//////imshow("Å£ÄÌºÐ±³¾°", toshowMat(heback));
+	////cvtColor(heback, heback, CV_BGR2GRAY);//»ñÈ¡»Ò¶ÈÍ¼
+	//////imshow("Å£ÄÌºÐ±³¾°-»Ò", toshowMat(heback));
+	////Mat back;
+	////Mat mark = cv::getStructuringElement(2, Size(51, 51));
+	////morphologyEx(heback, heback, MORPH_OPEN, mark);//¿ªÔËËã ÏÈ¸¯Ê´ºóÅòÕÍ
+	////imshow("Å£ÄÌºÐ±³¾°-¿ª", toshowMat(heback));
 
 
-	float alllength;
-	float max,min;
-	cout << "=====ÌáÈ¡µÄ=====" << endl;
-	cout << MyCV::getFeatures_LineLength(img1) << endl;
+
+	////b = mutlMat(b, heback);
+
+	////mark = cv::getStructuringElement(2, Size(11,11));
+	////morphologyEx(b,b, MORPH_OPEN, mark);
+	////imshow("ÌáÈ¡Í¼-¿ª", toshowMat(b));
+
+	//Mat img1 = x;
+
+
+	//float alllength;
+	//float max,min;
+	//cout << "=====ÌáÈ¡µÄ=====" << endl;
+	//cout << MyCV::getFeatures_LineLength(img1) << endl;
 	
 
 
-
+	Mat bacground;
+	cout << "=====Â¼È¡±³¾°Í¼=====" << endl;
+	imshow("±³¾°Í¼", Mat(10, 10, CV_8U));
+	waitKey(0);
+	cap >> bacground;
+	imshow("±³¾°Í¼", bacground);
 
 	waitKey(0);
 	return 0;

@@ -15,6 +15,8 @@
 #include <imgproc.hpp>
 #include <highgui.hpp>
 #include <vector>
+#include <Windows.h>
+#include <thread>
 
 using namespace std;
 using namespace cv;
