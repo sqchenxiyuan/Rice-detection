@@ -7,7 +7,7 @@ Mat mutlMat(const Mat a, const Mat b);
 Mat rotateImage1(Mat img, int degree);
 Mat getNBack();
 Mat hunhe(vector<Mat> imgs);
-vector<Mat> getKuai(Mat img);
+vector<Mat> getKuai(const Mat img, const Mat yuan);
 Mat mutlMat_gray(const Mat a, const Mat b);
 
 
@@ -28,7 +28,7 @@ DWORD WINAPI  showViedo(LPVOID lpParam){
 
 int _tmain(int argc, _TCHAR* argv[])
 {	
-	VideoCapture cap(0);
+	/*VideoCapture cap(0);
 	HANDLE v = CreateThread(0, 0, showViedo, &cap, 0, NULL);
 
 	cout << "=========无吸管集合=========" << endl;
@@ -43,26 +43,50 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	cout << "错误平均 : " << true_set.getLength("avg") << endl;
 	cout << "最大值 : " << true_set.getLength("max") << endl;
-	cout << "最小值 : " << true_set.getLength("min") << endl;
+	cout << "最小值 : " << true_set.getLength("min") << endl;*/
+
+
+	/*Mat bacground;
+	cout << "=====录取背景图=====" << endl;
+	imshow("背景图", Mat(10, 10, CV_8U));
+	waitKey(0);
+	cap >> bacground;
+	imshow("背景图", bacground);
+	*/
+
+
 
 
 
 	//////////////////////////////////////////////获取牛奶盒
-	//Mat backgroud = imread("src/P1.png");
-	////Mat backgroud_show = toshowMat(backgroud);
-	////cvtColor(backgroud, backgroud, CV_BGR2GRAY);//获取灰度图
-	//GaussianBlur(backgroud, backgroud, Size(15, 15), 1.5, 1.5);
-	////Canny(backgroud, backgroud,0, 30, 3);
-	//imshow("背景图", backgroud);
+	Mat backgroud = imread("src/test/0.jpg");
+	GaussianBlur(backgroud, backgroud, Size(7, 7), 1.5, 1.5);
+	imshow("背景图", backgroud);
 
-	//Mat test = imread("src/P2.png");
-	////Mat test_show = toshowMat(test);
-	////cvtColor(test, test, CV_BGR2GRAY);//获取灰度图
-	//GaussianBlur(test, test, Size(15, 15), 1.5, 1.5);
-	////Canny(test, test, 0, 30, 3);
-	//imshow("检测图", test);
+	Mat item = imread("src/test/1.jpg");
+	Mat item_blur;
+	GaussianBlur(item, item_blur, Size(7, 7), 1.5, 1.5);
+	imshow("获取图", item);
 
+	Mat mult = mutlMat(item_blur, backgroud);
+	//cvtColor(mult, mult, CV_BGR2GRAY);//获取灰度图
+	//Canny(mult, mult, 0, 30, 3);
+	Mat back;
+	Mat mark = cv::getStructuringElement(2, Size(3, 3));
+	morphologyEx(mult, mult, MORPH_OPEN, mark);//开运算 先腐蚀后膨胀
+	Mat mark2 = cv::getStructuringElement(2, Size(25, 25));
+	morphologyEx(mult, mult, MORPH_CLOSE, mark2);//开运算 先腐蚀后膨胀
+	morphologyEx(mult, mult, MORPH_OPEN, mark2);
+	imshow("减去图", mult);
 
+	vector<Mat> kuais = getKuai(mult, item);
+	for (int i = 0; i < kuais.size(); i++)
+	{
+		//imshow("提取图" + i, toshowMat(kuais.at(i)));
+		Mat x = kuais.at(i);
+		imshow("提取图 牛奶盒", x);
+		cout << MyCV::getFeatures_LineLength(x) << endl;
+	}
 
 
 	//Mat mult = mutlMat(test, backgroud);
@@ -74,13 +98,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	////imshow("提取图", toshowMat(mult));
 	//Mat x;
 
-	//vector<Mat> kuais=getKuai(mult);
-	//for (int i = 0; i < kuais.size(); i++)
-	//{
-	//	//imshow("提取图" + i, toshowMat(kuais.at(i)));
-	//	x = getKuai(kuais.at(i)).at(i);
-	//	//imshow("提取图 牛奶盒", toshowMat(x));
-	//}
+	
 
 	///*Size dsize = Size(600, 1000);
 	//Mat b = Mat(dsize, x.type());
@@ -113,13 +131,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	
 
 
-	Mat bacground;
-	cout << "=====录取背景图=====" << endl;
-	imshow("背景图", Mat(10, 10, CV_8U));
-	waitKey(0);
-	cap >> bacground;
-	imshow("背景图", bacground);
-
+	
 	waitKey(0);
 	return 0;
 }
@@ -136,14 +148,17 @@ Mat mutlMat(const Mat a, const Mat b){
 			for (int q = 0; q < 3; q++){
 				int x = a.at<Vec3b>(i, j)[q];
 				int y = b.at<Vec3b>(i, j)[q];
-				z += abs(x - y);	
+				z += x - y;	
 			}
 			if (z < 50) out.at<Vec3b>(i, j) = Vec3b(0,0,0);
-			else out.at<Vec3b>(i, j) = a.at<Vec3b>(i, j);
+			else out.at<Vec3b>(i, j) = Vec3b(255, 255, 255);
+			//else out.at<Vec3b>(i, j) = a.at<Vec3b>(i, j);
 		}
 	}
 	return out;
 }
+
+
 
 Mat mutlMat_gray(const Mat a, const Mat b){
 	Size dsize = Size(a.cols, a.rows);
@@ -247,19 +262,19 @@ Mat hunhe(vector<Mat> imgs){
 	return out;
 }
 
-vector<Mat> getKuai(Mat img){
+vector<Mat> getKuai(const Mat img,const Mat yuan){
 	vector<Mat> list;
-	Mat x,y;
+	Mat x,y,z;
 	img.copyTo(x);
 	img.copyTo(y);
+	yuan.copyTo(z);
 
 	cvtColor(x, x, CV_BGR2GRAY);//获取灰度图
 	threshold(x,x, 1, 255, CV_THRESH_BINARY);//二值化
 	GaussianBlur(x, x, Size(5, 5), 1, 1);
-
 	//Canny(mult, mult,0, 100, 3);
 
-	//imshow("提取图-canny", toshowMat(mult));
+	
 
 	vector<vector<Point>> storage;
 	vector<Vec4i> hierarchy;
@@ -267,6 +282,7 @@ vector<Mat> getKuai(Mat img){
 
 	/*imshow("test1",x);*/
 	cv::findContours(x, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+	cout << storage.size() << endl;
 	for (int i = 0; i < storage.size(); i++)
 	{
 		
@@ -275,20 +291,18 @@ vector<Mat> getKuai(Mat img){
 		//cout << minRect.angle;
 		//imshow("test", y);
 
-		Mat h = y(bo).clone();
+		Mat h = z(bo).clone();
 		h = rotateImage1(h, -minRect.angle);
 		
 		list.push_back(h);
-
-		rectangle(y, bo, Scalar(0, 0, 255));
-	}
-
-	for (int i = 0; i < storage.size(); i++)
-	{
+		
+		/*rectangle(y, bo, Scalar(0, 0, 255));
 		drawContours(y, storage, i, Scalar(255, 0, 0), 2, 8);
+		imshow("test", y);
+		waitKey(0);*/
 	}
 
-	//imshow("提取图123", toshowMat(y));
+	
 
 	return list;
 }

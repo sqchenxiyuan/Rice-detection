@@ -24,17 +24,17 @@ float MyCV::getFeatures_LineLength(const Mat input){
 	for (int i = 0; i < storage.size(); i++)
 	{
 		RotatedRect minRect = minAreaRect(storage.at(i));
-		//drawContours(b, storage, i, Scalar(255, 0, 0), 1, 8);
-		//imshow("提取图-边缘", toshowMat(b));
+		
 		//if (minRect.angle<-15 && minRect.angle>-30 && minRect.size.width<10){
 		float p = minRect.size.height / minRect.size.width;
 
 		if (minRect.angle<-13 && minRect.angle>-33 && p>3){
-			rectangle(a, minRect.boundingRect(), Scalar(255, 0, 0));
-			drawContours(a, storage, i, Scalar(255, 0, 0), 2, 8);
+			//rectangle(a, minRect.boundingRect(), Scalar(255, 0, 0));
+			//drawContours(a, storage, i, Scalar(255, 0, 0), 2, 8);
 			vector<Point> points = storage.at(i);
 			lineLength += arcLength(points, true) / 4;
 		}
+		
 	}
 	//imshow("提取图-边缘", toshowMat(a));
 	//waitKey(0);
