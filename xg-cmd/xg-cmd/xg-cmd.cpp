@@ -3,12 +3,8 @@
 
 #include "stdafx.h"
 
-Mat mutlMat(const Mat a, const Mat b);
-Mat rotateImage1(Mat img, int degree);
 Mat getNBack();
 Mat hunhe(vector<Mat> imgs);
-vector<Mat> getKuai(const Mat img, const Mat yuan);
-Mat mutlMat_gray(const Mat a, const Mat b);
 
 
 DWORD WINAPI  showViedo(LPVOID lpParam){
@@ -59,33 +55,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	//////////////////////////////////////////////获取牛奶盒
-	Mat backgroud = imread("src/test/0.jpg");
-	GaussianBlur(backgroud, backgroud, Size(7, 7), 1.5, 1.5);
-	imshow("背景图", backgroud);
+	CWatcher w1(imread("src/test/0.jpg"));
 
-	Mat item = imread("src/test/1.jpg");
-	Mat item_blur;
-	GaussianBlur(item, item_blur, Size(7, 7), 1.5, 1.5);
-	imshow("获取图", item);
-
-	Mat mult = mutlMat(item_blur, backgroud);
-	//cvtColor(mult, mult, CV_BGR2GRAY);//获取灰度图
-	//Canny(mult, mult, 0, 30, 3);
-	Mat back;
-	Mat mark = cv::getStructuringElement(2, Size(3, 3));
-	morphologyEx(mult, mult, MORPH_OPEN, mark);//开运算 先腐蚀后膨胀
-	Mat mark2 = cv::getStructuringElement(2, Size(25, 25));
-	morphologyEx(mult, mult, MORPH_CLOSE, mark2);//开运算 先腐蚀后膨胀
-	morphologyEx(mult, mult, MORPH_OPEN, mark2);
-	imshow("减去图", mult);
-
-	vector<Mat> kuais = getKuai(mult, item);
+	vector<Mat> kuais = w1.getBlock(imread("src/test/2.jpg"));
 	for (int i = 0; i < kuais.size(); i++)
 	{
 		//imshow("提取图" + i, toshowMat(kuais.at(i)));
 		Mat x = kuais.at(i);
 		imshow("提取图 牛奶盒", x);
-		cout << MyCV::getFeatures_LineLength(x) << endl;
+		cout << MyCV::getFeatures_LineLength(x)<<"---"<<i << endl;
+		waitKey(0);
 	}
 
 
@@ -138,73 +117,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 
-Mat mutlMat(const Mat a, const Mat b){
-	Size dsize = Size(a.cols, a.rows);
-	Mat out = Mat(dsize, CV_8UC3);
-	for (int i = 0; i < a.rows&&i < b.rows; i++){
-		for (int j = 0; j < a.cols&&j < b.cols; j++){
-			Vec3b vec;
-			int z = 0;
-			for (int q = 0; q < 3; q++){
-				int x = a.at<Vec3b>(i, j)[q];
-				int y = b.at<Vec3b>(i, j)[q];
-				z += x - y;	
-			}
-			if (z < 50) out.at<Vec3b>(i, j) = Vec3b(0,0,0);
-			else out.at<Vec3b>(i, j) = Vec3b(255, 255, 255);
-			//else out.at<Vec3b>(i, j) = a.at<Vec3b>(i, j);
-		}
-	}
-	return out;
-}
 
-
-
-Mat mutlMat_gray(const Mat a, const Mat b){
-	Size dsize = Size(a.cols, a.rows);
-	Mat out = Mat(dsize,CV_8U);
-	for (int i = 0; i < a.rows&&i < b.rows; i++){
-		for (int j = 0; j < a.cols&&j < b.cols; j++){
-			int x = a.at<uchar>(i, j);
-			int y = b.at<uchar>(i, j);
-			int z = abs(x - y);
-			//if (z < 30) out.at<uchar>(i, j) = 0;
-			//else out.at<uchar>(i, j) = z;
-			out.at<uchar>(i, j) = z;
-		}
-	}
-	return out;
-}
-
-
-Mat rotateImage1(Mat img, int degree)
-{
-	degree = -degree;
-	double angle = degree  * CV_PI / 180.; // 弧度  
-	double a = sin(angle), b = cos(angle);
-	int width = img.cols;
-	int height = img.rows;
-	int width_rotate = int(height * fabs(a) + width * fabs(b));
-	int height_rotate = int(width * fabs(a) + height * fabs(b));
-	//旋转数组map
-	// [ m0  m1  m2 ] ===>  [ A11  A12   b1 ]
-	// [ m3  m4  m5 ] ===>  [ A21  A22   b2 ]
-	float map[6];
-	Mat map_matrix = Mat(2, 3, CV_32F, map);
-	// 旋转中心
-	CvPoint2D32f center = cvPoint2D32f(width / 2, height / 2);
-	CvMat map_matrix2 = map_matrix;
-	cv2DRotationMatrix(center, degree, 1.0, &map_matrix2);
-	map[2] += (width_rotate - width) / 2;
-	map[5] += (height_rotate - height) / 2;
-	Mat img_rotate;
-	//对图像做仿射变换
-	//CV_WARP_FILL_OUTLIERS - 填充所有输出图像的象素。
-	//如果部分象素落在输入图像的边界外，那么它们的值设定为 fillval.
-	//CV_WARP_INVERSE_MAP - 指定 map_matrix 是输出图像到输入图像的反变换，
-	warpAffine(img, img_rotate, map_matrix, Size(width_rotate, height_rotate), 1, 0, 0);
-	return img_rotate;
-}
 
 Mat getNBack(){
 	Mat i1 = imread("src/back/1.jpg");
@@ -262,47 +175,9 @@ Mat hunhe(vector<Mat> imgs){
 	return out;
 }
 
-vector<Mat> getKuai(const Mat img,const Mat yuan){
-	vector<Mat> list;
-	Mat x,y,z;
-	img.copyTo(x);
-	img.copyTo(y);
-	yuan.copyTo(z);
 
-	cvtColor(x, x, CV_BGR2GRAY);//获取灰度图
-	threshold(x,x, 1, 255, CV_THRESH_BINARY);//二值化
-	GaussianBlur(x, x, Size(5, 5), 1, 1);
-	//Canny(mult, mult,0, 100, 3);
-
-	
-
-	vector<vector<Point>> storage;
-	vector<Vec4i> hierarchy;
-	//去除边缘的米   默认为一个米
-
-	/*imshow("test1",x);*/
-	cv::findContours(x, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-	cout << storage.size() << endl;
-	for (int i = 0; i < storage.size(); i++)
-	{
-		
-		RotatedRect minRect = minAreaRect(storage.at(i));
-		Rect bo = boundingRect(storage.at(i));
-		//cout << minRect.angle;
-		//imshow("test", y);
-
-		Mat h = z(bo).clone();
-		h = rotateImage1(h, -minRect.angle);
-		
-		list.push_back(h);
-		
-		/*rectangle(y, bo, Scalar(0, 0, 255));
-		drawContours(y, storage, i, Scalar(255, 0, 0), 2, 8);
-		imshow("test", y);
-		waitKey(0);*/
-	}
-
-	
-
-	return list;
+bool sizesomp(const vector<Point> &a, const vector<Point> &b){
+	RotatedRect x1 = minAreaRect(a);
+	RotatedRect x2 = minAreaRect(b);
+	return x1.size.area() > x2.size.area();
 }
