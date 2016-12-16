@@ -1,11 +1,32 @@
 #include "stdafx.h"
 #include "Watcher.h"
 
+DWORD WINAPI showVideo(LPVOID lpParam){
+	VideoCapture* cap = (VideoCapture*)lpParam;
+	Mat now;
+	bool stop = false;
+	string name = "Wacter" + int(rand() * 10000 / RAND_MAX + 1.0);
+	while (!stop)
+	{
+		*cap >> now;
+		imshow(name, now);
+		if (waitKey(30) == 113){
+			stop = true;
+		}
+	}
+	return NULL;
+}
 
-CWatcher::CWatcher(Mat background)
+CWatcher::CWatcher(string name,Mat background)
 {
+	m_name = name;
+	cout << "加载观察员中" << endl;
+	m_cap=VideoCapture(0);
 	GaussianBlur(background, background, Size(7, 7), 1.5, 1.5);
 	m_background = background;
+	m_handle = CreateThread(0, 0, showVideo, &m_cap, 0, NULL);
+	cout << "加载观察员加载完成" << endl;
+	//system("Cls");
 }
 
 
@@ -18,6 +39,20 @@ bool sizecomp(const vector<Point> &a, const vector<Point> &b){
 	RotatedRect x1 = minAreaRect(a);
 	RotatedRect x2 = minAreaRect(b);
 	return x1.size.area() > x2.size.area();
+}
+
+void CWatcher::shotBackground(){
+	Mat x;
+	m_cap >> x;
+	GaussianBlur(x,x , Size(7, 7), 1.5, 1.5);
+	m_background = x;
+	imshow("背景图", m_background);
+}
+
+vector<Mat> CWatcher::shotItem(){
+	Mat shot;
+	m_cap >> shot;
+	return getBlock(shot);
 }
 
 vector<Mat> CWatcher::getBlock(Mat img){
@@ -53,7 +88,7 @@ vector<Mat> CWatcher::getBlock(Mat img){
 			float WLRatio = minRect.size.width / minRect.size.height;
 			if (WLRatio<0.5 ||
 				WLRatio>0.7 ||
-				minRect.size.area()<100||
+				minRect.size.area()<1000||
 				(bo.x<minRect.center.x&&
 				bo.y<minRect.center.y&&
 				bo.x + bo.width>minRect.center.x&&
@@ -72,14 +107,16 @@ vector<Mat> CWatcher::getBlock(Mat img){
 
 		RotatedRect minRect = minAreaRect(boxs.at(i));
 		Rect bo = boundingRect(boxs.at(i));
-		//cout << minRect.size.width / minRect.size.height << endl;
-		//cout << bo << "==" << minRect.center << endl;
-		//imshow("test", y);
 
 		Mat h = img(bo).clone();
 		h = MyCV::rotateImage(h, -minRect.angle);
-
-		blocks.push_back(h);
+		float height = minRect.size.height;
+		float width = minRect.size.width;
+		Rect rect(h.cols/2-width/2, h.rows/2-height/2, width, height);
+		Mat out = h(rect).clone();
+		if (MyCV::getFeatures_LineLength(out) > 10){
+			blocks.push_back(out);
+		}
 
 		/*rectangle(img, bo, Scalar(0, 0, 255));
 		drawContours(img, storage, i, Scalar(255, 0, 0), 2, 8);
@@ -110,3 +147,4 @@ Mat CWatcher::multMat(const Mat a, const Mat b){
 	}
 	return out;
 }
+

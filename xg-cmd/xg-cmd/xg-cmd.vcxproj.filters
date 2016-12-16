@@ -33,6 +33,9 @@
     <ClInclude Include="Watcher.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Judger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -48,6 +51,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Watcher.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Judger.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
