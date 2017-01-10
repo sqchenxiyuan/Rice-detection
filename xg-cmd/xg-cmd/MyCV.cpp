@@ -6,6 +6,9 @@ float MyCV::getFeatures_LineLength(const Mat input){
 	Mat a = Mat(dsize, CV_8UC3);
 	resize(input, a, dsize);
 
+	imshow("test", toshowMat(a));
+	waitKey();
+
 	float lineLength = 0;
 
 	cvtColor(a, a, CV_BGR2GRAY);//获取灰度图
@@ -16,6 +19,8 @@ float MyCV::getFeatures_LineLength(const Mat input){
 	Canny(a, a, 0, 30, 3, 3);
 	//imshow("提取图-canny", toshowMat(b));
 
+	imshow("test", toshowMat(a));
+	waitKey();
 
 	vector<vector<Point>> storage;
 	vector<Vec4i> hierarchy;
@@ -29,13 +34,15 @@ float MyCV::getFeatures_LineLength(const Mat input){
 		float p = minRect.size.height / minRect.size.width;
 
 		if (minRect.angle<-13 && minRect.angle>-33 && p>3){
-			//rectangle(a, minRect.boundingRect(), Scalar(255, 0, 0));
-			//drawContours(a, storage, i, Scalar(255, 0, 0), 2, 8);
+			rectangle(a, minRect.boundingRect(), Scalar(255, 0, 0));
+			drawContours(a, storage, i, Scalar(255, 0, 0), 2, 8);
 			vector<Point> points = storage.at(i);
 			lineLength += arcLength(points, true) / 4;
 		}
 		
 	}
+	imshow("test", toshowMat(a));
+	waitKey();
 	//imshow("提取图-边缘", toshowMat(a));
 	//waitKey(0);
 

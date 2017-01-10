@@ -59,17 +59,19 @@ vector<Mat> CWatcher::getBlock(Mat img){
 	GaussianBlur(img, img, Size(7, 7), 1.5, 1.5);
 
 	Mat mult = multMat(img, m_background);
-
 	Mat mark = cv::getStructuringElement(2, Size(3, 3));
 	morphologyEx(mult, mult, MORPH_OPEN, mark);//开运算 先腐蚀后膨胀
-
 	vector<Mat> blocks;
+
+	imshow("test", mult);
+	waitKey();
 
 	cvtColor(mult, mult, CV_BGR2GRAY);//获取灰度图
 	threshold(mult, mult, 1, 255, CV_THRESH_BINARY);//二值化
 	GaussianBlur(mult, mult, Size(5, 5), 1, 1);
 
-
+	imshow("test", mult);
+	waitKey();
 
 	vector<vector<Point>> storage;
 	vector<Vec4i> hierarchy;
@@ -102,6 +104,7 @@ vector<Mat> CWatcher::getBlock(Mat img){
 		}
 	}
 
+
 	for (int i = 0; i < boxs.size(); i++)
 	{
 
@@ -110,11 +113,15 @@ vector<Mat> CWatcher::getBlock(Mat img){
 
 		Mat h = img(bo).clone();
 		h = MyCV::rotateImage(h, -minRect.angle);
+
 		float height = minRect.size.height;
 		float width = minRect.size.width;
 		Rect rect(h.cols/2-width/2, h.rows/2-height/2, width, height);
 		Mat out = h(rect).clone();
+
 		if (MyCV::getFeatures_LineLength(out) > 10){
+			imshow("test", out);
+			waitKey();
 			blocks.push_back(out);
 		}
 
@@ -123,6 +130,7 @@ vector<Mat> CWatcher::getBlock(Mat img){
 		imshow("test", img);
 		waitKey(0);*/
 	}
+
 
 	return blocks;
 }
@@ -141,8 +149,8 @@ Mat CWatcher::multMat(const Mat a, const Mat b){
 				z += x - y;
 			}
 			if (z < 50) out.at<Vec3b>(i, j) = Vec3b(0, 0, 0);
-			else out.at<Vec3b>(i, j) = Vec3b(255, 255, 255);
-			//else out.at<Vec3b>(i, j) = a.at<Vec3b>(i, j);
+			//else out.at<Vec3b>(i, j) = Vec3b(255, 255, 255);
+			else out.at<Vec3b>(i, j) = a.at<Vec3b>(i, j);
 		}
 	}
 	return out;

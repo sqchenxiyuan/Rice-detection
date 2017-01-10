@@ -78,13 +78,20 @@ float CImgSetData::getAcquaintance(const Mat img){
 		return 0;
 	}*/
 
-	if (Features_length > length_min/2&&
+	float lmin = length_avg - length_min;
+	float lmax = length_max - length_avg;
+	float c = lmax + lmin - abs(Features_length - length_avg);
+	if (c < 0)c = 0;
+	float out = c / (lmax + lmin);
+	return out;
+
+	/*if (Features_length > length_min/2&&
 		Features_length < length_max*3/2){
 		return 1;
 	}
 	else{
 		return 0;
-	}
+	}*/
 }
 
 void CImgSetData::loadImages(){
