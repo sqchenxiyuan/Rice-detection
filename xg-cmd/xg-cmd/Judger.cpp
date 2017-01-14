@@ -23,8 +23,6 @@ CJudger::CJudger(string true_set_path,string false_set_path)
 	cout << "最小值 : " << false_set->getLength("min") << endl;
 
 	cout << "加载检测员加载完成" << endl;
-	//Sleep(1000);
-	//system("Cls");
 }
 
 
@@ -33,31 +31,43 @@ CJudger::~CJudger()
 }
 
 void CJudger::judge(vector<Mat> block){
+	clock_t startTime, endTime;
+	startTime = clock();
 	for (int i = 0; i < block.size(); i++)
 	{
 		Mat x = block.at(i);
 		float true_s = true_set->getAcquaintance(x);
 		float false_s = false_set->getAcquaintance(x);
 
-		if (true_s == 1 && false_s == 0){
+		if (true_s <= 0 && false_s <= 0){
+			cout << "无法判断";
+		}
+		else if (true_s >= false_s){
 			cout << "有吸管";
 		}
-		else if (true_s == 0 && false_s == 1){
+		else if (true_s < false_s){
 			cout << "无吸管";
 		}
 		else{
 			cout << "无法判断";
 		}
 		cout << "    正确相识度：" << true_s << "错误相识度：" << false_s << "---" << i << endl;
-		imshow("监测图", x);
-		waitKey(0);
 	}
-	cv::destroyWindow("监测图");
+	endTime = clock();
+	cout << "Totle Time : " << (double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
 }
 
 void CJudger::trans_true(vector<Mat> imgs){
+	clock_t startTime, endTime;
+	startTime = clock();
 	true_set->addTrans(imgs);
+	endTime = clock();
+	cout << "Totle Time : " << (double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
 }
 void CJudger::trans_false(vector<Mat> imgs){
+	clock_t startTime, endTime;
+	startTime = clock();
 	false_set->addTrans(imgs);
+	endTime = clock();
+	cout << "Totle Time : " << (double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
 }

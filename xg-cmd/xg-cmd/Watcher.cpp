@@ -42,10 +42,16 @@ bool sizecomp(const vector<Point> &a, const vector<Point> &b){
 }
 
 void CWatcher::shotBackground(){
+	clock_t startTime, endTime;
+	startTime = clock();
+
 	Mat x;
 	m_cap >> x;
 	GaussianBlur(x,x , Size(7, 7), 1.5, 1.5);
 	m_background = x;
+	endTime = clock();
+	cout << "Totle Time : " << (double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
+
 	imshow("背景图", m_background);
 }
 
@@ -63,20 +69,14 @@ vector<Mat> CWatcher::getBlock(Mat img){
 	morphologyEx(mult, mult, MORPH_OPEN, mark);//开运算 先腐蚀后膨胀
 	vector<Mat> blocks;
 
-	imshow("test", mult);
-	waitKey();
-
 	cvtColor(mult, mult, CV_BGR2GRAY);//获取灰度图
 	threshold(mult, mult, 1, 255, CV_THRESH_BINARY);//二值化
 	GaussianBlur(mult, mult, Size(5, 5), 1, 1);
 
-	imshow("test", mult);
-	waitKey();
 
 	vector<vector<Point>> storage;
 	vector<Vec4i> hierarchy;
 	cv::findContours(mult, storage, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-	/*cout << storage.size() << endl;*/
 	sort(storage.begin(), storage.end(), sizecomp);
 
 	vector<vector<Point>> boxs;
@@ -94,7 +94,7 @@ vector<Mat> CWatcher::getBlock(Mat img){
 				(bo.x<minRect.center.x&&
 				bo.y<minRect.center.y&&
 				bo.x + bo.width>minRect.center.x&&
-				bo.y + bo.height>minRect.center.y)){
+				bo.y + bo.height>minRect.center.y)){//判断是否满足需求
 				in = true;
 				break;
 			}
@@ -111,17 +111,17 @@ vector<Mat> CWatcher::getBlock(Mat img){
 		RotatedRect minRect = minAreaRect(boxs.at(i));
 		Rect bo = boundingRect(boxs.at(i));
 
-		Mat h = img(bo).clone();
-		h = MyCV::rotateImage(h, -minRect.angle);
+		Mat rimg = img(bo).clone();
+		rimg = MyCV::rotateImage(rimg, -minRect.angle);//旋转图片
 
 		float height = minRect.size.height;
 		float width = minRect.size.width;
-		Rect rect(h.cols/2-width/2, h.rows/2-height/2, width, height);
-		Mat out = h(rect).clone();
+		Rect rect(rimg.cols / 2 - width / 2, rimg.rows / 2 - height / 2, width, height);
+		Mat out = rimg(rect).clone();
 
 		if (MyCV::getFeatures_LineLength(out) > 10){
-			imshow("test", out);
-			waitKey();
+			/*imshow("test", out);
+			waitKey();*/
 			blocks.push_back(out);
 		}
 
